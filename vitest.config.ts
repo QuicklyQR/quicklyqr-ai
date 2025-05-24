@@ -9,12 +9,6 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     globals: true,
     include: ['tests/**/*.{test,spec}.{ts,tsx}'],
-    coverage: {
-      enabled: true,
-      provider: '@vitest/coverage-v8',
-      reporter: ['text', 'html'],
-      reportsDirectory: './coverage/v8',
-    },
   },
   resolve: {
     alias: {
