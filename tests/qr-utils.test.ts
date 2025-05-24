@@ -387,6 +387,16 @@ describe('qr-utils', () => {
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
+    
+    it('should handle validation for undefined QR data properties', () => {
+      // This test specifically targets line 69 in qr-utils.ts
+      const result = validateQRData({ 
+        type: 'vcard',
+        vcard: undefined 
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Contact data is required');
+    });
   });
 
   describe('getDefaultQROptions', () => {
