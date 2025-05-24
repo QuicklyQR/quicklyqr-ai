@@ -11,7 +11,7 @@ export default defineConfig({
     include: ['tests/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
       enabled: true,
-      provider: 'v8',
+      provider: '@vitest/coverage-v8',
       reporter: ['text', 'html'],
       reportsDirectory: './coverage/v8',
     },
