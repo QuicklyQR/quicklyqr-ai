@@ -12,6 +12,8 @@
     "format:check": "prettier --check .",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
+    "c8:coverage": "c8 --reporter=text --reporter=html --reporter=lcov --exclude='tests/**' --exclude='node_modules/**' vitest run",
+    "c8:report": "c8 report --reporter=text --reporter=html --reporter=lcov",
     "type-check": "tsc --noEmit",
     "prepare": "husky install"
   },
