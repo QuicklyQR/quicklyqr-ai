@@ -10,7 +10,7 @@ export default defineConfig({
     globals: true,
     include: ['tests/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
-      provider: 'v8',
+      provider: '@vitest/coverage-v8',
       reporter: ['text', 'html'],
       reportsDirectory: './coverage/v8',
     },
