@@ -1,0 +1,137 @@
+─────────────────────────────────────────────
+ Claude‑Task‑Master ‑ INPUT DOCUMENT
+─────────────────────────────────────────────
+
+Project Overview
+────────────────
+Project Name: QR Code Generator SaaS  
+Description: A branded QR‑code generator that offers logo embedding, analytics, and a Stripe‑powered subscription model (Free, Pro, Business).  
+Timeline: 2 days (≈ 20‑24 h) of focused build time.  
+Success Criteria:
+  • Deployed MVP on Vercel, custom domain live.  
+  • Core flows working end‑to‑end (QR create → download → scan analytics → paywall).  
+  • Clean CI pipeline, 90 %+ unit‑test coverage on critical libs.  
+  • Ready to begin $200 / mo revenue‑target marketing sprint.
+
+Main Tasks
+──────────
+Task 1: Project Initialization & CI  
+Description: Bootstrap repo, tooling, and continuous‑integration guardrails.  
+Est. Time: 45 min Priority: High Dependencies: –  
+Sub‑tasks:  
+  1.1  Initialize Next.js 14 (TypeScript, Tailwind, App Router) with pnpm.  
+  1.2  Install baseline deps: qr-code-styling, canvas, react-dropzone, lucide-react, next-themes, @stripe/stripe-js, @upstash/ratelimit, @vercel/analytics (basic site usage tracking).  
+  1.3  Add dev/CI deps: eslint, prettier, husky, lint-staged, commitlint, turbo, vitest, @testing-library/react.  
+  1.4  Set up folder structure: /app, /components, /lib, /types, /utils, /tests, /prompts.  
+  1.5  Configure GitHub Actions CI: lint → test → build.  
+  1.6  Add Husky pre‑commit hooks (lint‑staged + commit‑msg).  
+
+Task 2: Core QR Generation Engine  
+Description: Build type‑safe QR creator with tests.  
+Est. Time: 3 h Priority: High Dependencies: Task 1  
+Sub‑tasks:  
+  2.1  Create <QRCodeBuilder/> component using qr-code-styling.  
+  2.2  Support data types: URL, WiFi, vCard, text.  
+  2.3  Customization controls (fg/bg color pickers, size 128‑1024 px, error‑correction).  
+  2.4  Download as PNG (default).  
+  2.5  Write unit tests for each generator path (Vitest).  
+
+Task 3: Advanced QR Features & Worker Queue  
+Description: Logo overlay, bulk CSV, multi‑format export, server queue.  
+Est. Time: 4 h Priority: Medium Dependencies: Task 2  
+Sub‑tasks:  
+  3.1  Drag‑and‑drop logo upload (react‑dropzone) → auto‑scale into QR centre.  
+  3.2  CSV upload → stream parse with Papa Parse; push each row into bullmq (Redis) queue for generation; return ZIP.  
+  3.3  Additional exports: SVG, PDF, EPS.  
+  3.4  Contrast & scan validator: canvas read‑back warns if contrast < WCAG threshold and suggests nearest accessible foreground/background pair (e.g. via tinycolor) instead of silently failing.  
+
+Task 4: UI & Accessibility  
+Description: Landing page, dashboard, real‑time preview, WCAG compliance.  
+Est. Time: 3 h Priority: High Dependencies: Task 3  
+Sub‑tasks:  
+  4.1  Build landing page (hero, features, pricing).  
+  4.2  Dashboard shell with shadcn/ui sidebar & mobile nav.  
+  4.3  Real‑time <QRPreview/> updates via Zustand store.  
+  4.4  Color contrast checker + focus states for accessibility.  
+
+Task 5: Payments & Auth  
+Description: Stripe subscriptions, passwordless auth, feature gating.  
+Est. Time: 3 h Priority: High Dependencies: Task 4  
+Sub‑tasks:  
+  5.1  Integrate @auth/core (NextAuth) Email provider (magic link).  
+  5.2  Stripe Payment Element with three plans; enable SCA.  
+  5.3  Webhook handler (signature‑verified, 10 s timeout) → persist subscription status.  
+  5.4  Feature gating middleware: watermark on Free, limits on CSV size, analytics locked.  
+  5.5  Unit tests with stripe-mock.  
+
+Task 6: Scan Analytics & Edge Tracking  
+Description: Privacy‑compliant scan logging + dashboard charts.  
+Est. Time: 2 h Priority: Medium Dependencies: Task 5  
+Sub‑tasks:  
+  6.1  Create /t/:id edge route that 302s to target URL, logs scan (timestamp, city/region, UA) into Planetscale or ClickHouse.  
+  6.2  Analytics dashboard cards (total scans, last 7 days, top codes).  
+  6.3  CSV export button.  
+
+Task 7: Performance, Observability, SEO & Compliance  
+Description: Speed, error monitoring, meta tags, GDPR opt‑out.  
+Est. Time: 3 h Priority: Medium Dependencies: Task 6  
+Sub‑tasks:  
+  7.1  Add global React error boundary + Sentry (free tier).  
+  7.2  Implement SWR caching for QR render previews.  
+  7.3  Add next-secure-headers + rate limiting on POST APIs.  
+  7.4  Lighthouse CI in GitHub Actions; fix PWA, perf, best‑practices ≥ 90.  
+  7.5  SEO: meta, sitemap.xml, robots.txt, Open Graph.  
+  7.6  GDPR/PECR compliance: cookie banner with opt‑out for EU visitors; track only after consent.  
+
+Task 8: Testing, QA & Deployment  
+Description: E2E polish and production release.  
+Est. Time: 2 h Priority: High Dependencies: Task 7  
+Sub‑tasks:  
+  8.1  Device matrix test (iOS/Android native scanners, Chrome/Edge).  
+  8.2  Validate Stripe flows in Vercel Preview and Production.  
+  8.3  Docker‑compose stack for local dev parity.  
+  8.4  Deploy to Vercel; configure canary slot; bind custom domain; set env vars.  
+  8.5  Final smoke test, tag v1.0.0.  
+
+Resource Requirements
+─────────────────────
+- Tech: Next.js 14, Tailwind, pnpm, Redis (Upstash), Planetscale/ClickHouse, Stripe, Vercel, GitHub Actions.  
+- Cost: ≈ $20 (domain) + pay‑as‑you‑go Redis & DB, Stripe fees.  
+- Team: Solo dev using Cursor + GPT‑4.  
+
+Risk Factors
+────────────
+1. Webhook cold‑start failures → Mitigate with edge route + retries.  
+2. QR readability with logos → Auto‑adjust ECC & surface "scan score".  
+3. Abuse (malicious URLs) → Google Safe Browsing API check.  
+4. Large CSV stalls → Background queue + progress polling.  
+
+Success Metrics
+───────────────
+- MVP live in ≤ 48 h.  
+- 95 % Lighthouse PWA/perf.  
+- First paid subscription activated.  
+- Analytics pixel logging with ≤ 50 ms edge latency.  
+
+─────────────────────────────────────────────
+Special Notes for Claude and Cursor Agents
+─────────────────────────────────────────────
+- The final product brand/domain is **QuicklyQR.ai**.  
+- Use **QuicklyQR.ai** everywhere in user-facing UI, meta tags, landing page, and marketing materials.
+- The .ai domain is intentional and should be considered part of the brand.
+- No roadmap, milestone, or engineering requirement changes are needed for the new domain.
+- The plan, task breakdown, and technical stack remain exactly as described.
+- Documentation, hero section, meta tags, or Open Graph image text can reference **QuicklyQR.ai** for consistency.
+- All best practices, security, accessibility, and compliance requirements listed above are mandatory and not optional.
+
+─────────────────────────────────────────────
+Pro Tips and Reminders
+─────────────────────────────────────────────
+- Launch with QuicklyQR.ai as your brand everywhere.
+- When building the landing page (Task 4.1), use the actual domain and clear, compelling taglines.
+- Use "QR Code Generator" and "Custom QR Codes" in SEO/metadata.
+- Set all powered by, watermark, or footers to QuicklyQR.ai.
+- Plan for future acquisition of QuicklyQR.com if needed, but proceed with .ai for all launches now.
+- Keep the focus on UX, speed, and professional branding at every step.
+- After each task or module, review output using a detailed checklist to confirm feature completion, UX, compliance, and test coverage.
+─────────────────────────────────────────────

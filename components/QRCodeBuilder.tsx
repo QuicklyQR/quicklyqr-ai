@@ -85,6 +85,50 @@ const QRCodeScanner = dynamic(() => import('./QRCodeScanner'), {
   ssr: false,
 });
 
+// Extract helper: parseVCardFields
+function parseVCardFields(scannedData: string) {
+  const newData = createInitialQRData('vcard');
+  const fnMatch = scannedData.match(/FN:(.*?)(?:\r?\n|$)/);
+  const nameMatch = scannedData.match(/N:(.*?)(?:\r?\n|$)/);
+  if (fnMatch && fnMatch[1]) {
+    const nameParts = fnMatch[1].trim().split(' ');
+    if (nameParts.length > 0) {
+      newData.vcard!.firstName = nameParts[0] || '';
+      newData.vcard!.lastName = nameParts.slice(1).join(' ') || '';
+    }
+  } else if (nameMatch && nameMatch[1]) {
+    const nameParts = nameMatch[1].split(';');
+    newData.vcard!.lastName = nameParts[0] || '';
+    newData.vcard!.firstName = nameParts[1] || '';
+  }
+  const telMatch = scannedData.match(/TEL(?:;[^:]*)?:(.*?)(?:\r?\n|$)/);
+  if (telMatch) newData.vcard!.phone = telMatch[1].trim();
+  const emailMatch = scannedData.match(/EMAIL(?:;[^:]*)?:(.*?)(?:\r?\n|$)/);
+  if (emailMatch) newData.vcard!.email = emailMatch[1].trim();
+  const orgMatch = scannedData.match(/ORG:(.*?)(?:\r?\n|$)/);
+  if (orgMatch) newData.vcard!.organization = orgMatch[1].trim();
+  const urlMatch = scannedData.match(/URL:(.*?)(?:\r?\n|$)/);
+  if (urlMatch) newData.vcard!.url = urlMatch[1].trim();
+  return newData;
+}
+
+// Extract helper: parseWiFiFields
+function parseWiFiFields(scannedData: string) {
+  const newData = createInitialQRData('wifi');
+  const securityMatch = scannedData.match(/T:([^;]*)/);
+  if (securityMatch) {
+    newData.wifi!.security =
+      securityMatch[1] === 'WPA' || securityMatch[1] === 'WEP' ? securityMatch[1] : 'nopass';
+  }
+  const ssidMatch = scannedData.match(/S:([^;]*)/);
+  if (ssidMatch) newData.wifi!.ssid = ssidMatch[1];
+  const passwordMatch = scannedData.match(/P:([^;]*)/);
+  if (passwordMatch) newData.wifi!.password = passwordMatch[1];
+  const hiddenMatch = scannedData.match(/H:([^;]*)/);
+  if (hiddenMatch) newData.wifi!.hidden = hiddenMatch[1].toLowerCase() === 'true';
+  return newData;
+}
+
 const QRCodeBuilder: React.FC = () => {
   const [qrData, setQrData] = useState<QRData>(createInitialQRData('url'));
   const [qrOptions, setQrOptions] = useState<QROptions>(getDefaultQROptions());
@@ -136,70 +180,17 @@ const QRCodeBuilder: React.FC = () => {
       setIsGenerating(false);
     }
   };
-  
-  // Handle successful QR code scan
+
+  // In handleScanSuccess, replace vCard and WiFi parsing with helpers
   const handleScanSuccess = (scannedData: string) => {
     try {
-      // Try to detect the QR code type and parse the data
       if (scannedData.startsWith('BEGIN:VCARD') && scannedData.includes('END:VCARD')) {
-        // vCard format
-        const newData = createInitialQRData('vcard');
-        
-        // Extract name
-        const fnMatch = scannedData.match(/FN:(.*?)(?:\r?\n|$)/);
-        const nameMatch = scannedData.match(/N:(.*?)(?:\r?\n|$)/);
-        
-        if (fnMatch && fnMatch[1]) {
-          const nameParts = fnMatch[1].trim().split(' ');
-          if (nameParts.length > 0) {
-            newData.vcard!.firstName = nameParts[0] || '';
-            newData.vcard!.lastName = nameParts.slice(1).join(' ') || '';
-          }
-        } else if (nameMatch && nameMatch[1]) {
-          const nameParts = nameMatch[1].split(';');
-          newData.vcard!.lastName = nameParts[0] || '';
-          newData.vcard!.firstName = nameParts[1] || '';
-        }
-        
-        // Extract other fields
-        const telMatch = scannedData.match(/TEL(?:;[^:]*)?:(.*?)(?:\r?\n|$)/);
-        if (telMatch) newData.vcard!.phone = telMatch[1].trim();
-        
-        const emailMatch = scannedData.match(/EMAIL(?:;[^:]*)?:(.*?)(?:\r?\n|$)/);
-        if (emailMatch) newData.vcard!.email = emailMatch[1].trim();
-        
-        const orgMatch = scannedData.match(/ORG:(.*?)(?:\r?\n|$)/);
-        if (orgMatch) newData.vcard!.organization = orgMatch[1].trim();
-        
-        const urlMatch = scannedData.match(/URL:(.*?)(?:\r?\n|$)/);
-        if (urlMatch) newData.vcard!.url = urlMatch[1].trim();
-        
-        setQrData(newData);
+        setQrData(parseVCardFields(scannedData));
         setTouchedFields({});
       } else if (scannedData.startsWith('WIFI:')) {
-        // WiFi format
-        const newData = createInitialQRData('wifi');
-        
-        const securityMatch = scannedData.match(/T:([^;]*)/);
-        if (securityMatch) {
-          newData.wifi!.security = (securityMatch[1] === 'WPA' || securityMatch[1] === 'WEP') 
-            ? securityMatch[1] 
-            : 'nopass';
-        }
-        
-        const ssidMatch = scannedData.match(/S:([^;]*)/);
-        if (ssidMatch) newData.wifi!.ssid = ssidMatch[1];
-        
-        const passwordMatch = scannedData.match(/P:([^;]*)/);
-        if (passwordMatch) newData.wifi!.password = passwordMatch[1];
-        
-        const hiddenMatch = scannedData.match(/H:([^;]*)/);
-        if (hiddenMatch) newData.wifi!.hidden = hiddenMatch[1].toLowerCase() === 'true';
-        
-        setQrData(newData);
+        setQrData(parseWiFiFields(scannedData));
         setTouchedFields({});
       } else if (scannedData.match(/^https?:\/\//)) {
-        // URL format
         const newData = createInitialQRData('url');
         newData.url = scannedData;
         setQrData(newData);
@@ -211,7 +202,7 @@ const QRCodeBuilder: React.FC = () => {
         setQrData(newData);
         setTouchedFields({});
       }
-      
+
       setShowScanner(false);
     } catch (error) {
       console.error('Failed to parse scanned QR code:', error);
@@ -507,7 +498,6 @@ const QRCodeBuilder: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-6xl px-4">
-
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           {/* Left Column - Controls */}
           <div className="space-y-6">
@@ -733,7 +723,7 @@ const QRCodeBuilder: React.FC = () => {
                 <Download className="mr-2 h-5 w-5" aria-hidden="true" />
                 {isGenerating ? 'Generating...' : 'Download'}
               </button>
-              
+
               {/* Scan Button */}
               <button
                 onClick={() => setShowScanner(true)}
@@ -763,13 +753,10 @@ const QRCodeBuilder: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* QR Code Scanner Modal */}
       {showScanner && (
-        <QRCodeScanner 
-          onScanSuccess={handleScanSuccess} 
-          onClose={() => setShowScanner(false)} 
-        />
+        <QRCodeScanner onScanSuccess={handleScanSuccess} onClose={() => setShowScanner(false)} />
       )}
     </div>
   );

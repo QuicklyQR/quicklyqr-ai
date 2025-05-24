@@ -35,13 +35,15 @@ export interface QROptions {
 }
 
 /**
- * Generates QR code data string based on type and content
+ * Generates QR code data string based on type and content.
+ * @param data - The QR data object.
+ * @returns The string to encode in the QR code.
  */
 export function generateQRString(data: QRData): string {
   if (!data || !data.type) {
     return '';
   }
-  
+
   switch (data.type) {
     case 'url':
       return data.url || '';
@@ -73,16 +75,18 @@ END:VCARD`;
 }
 
 /**
- * Validates QR data based on type
+ * Validates QR data based on type.
+ * @param data - The QR data object.
+ * @returns An object with isValid boolean and errors array.
  */
 export function validateQRData(data: QRData): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
-  
+
   if (!data) {
     errors.push('Invalid QR data');
     return { isValid: false, errors };
   }
-  
+
   if (!data.type) {
     errors.push('Invalid QR data type');
     return { isValid: false, errors };
@@ -141,7 +145,9 @@ export function validateQRData(data: QRData): { isValid: boolean; errors: string
 }
 
 /**
- * Creates initial data structure for a given QR type
+ * Creates initial data structure for a given QR type.
+ * @param type - The QR data type.
+ * @returns The initial QR data object for the type.
  */
 export function createInitialQRData(type: QRDataType): QRData {
   const baseData: QRData = { type };
@@ -177,7 +183,8 @@ export function createInitialQRData(type: QRDataType): QRData {
 }
 
 /**
- * Gets default QR options
+ * Gets default QR options.
+ * @returns The default QR options object.
  */
 export function getDefaultQROptions(): QROptions {
   return {
@@ -189,7 +196,10 @@ export function getDefaultQROptions(): QROptions {
 }
 
 /**
- * Converts QR options to qr-code-styling format
+ * Converts QR options to qr-code-styling format.
+ * @param options - The internal QR options.
+ * @param data - The QR code data string.
+ * @returns The options object for qr-code-styling.
  */
 export function convertToQRCodeStylingOptions(options: QROptions, data: string) {
   return {
@@ -219,7 +229,9 @@ export function convertToQRCodeStylingOptions(options: QROptions, data: string) 
 }
 
 /**
- * Utility functions for validation
+ * Checks if a string is a valid URL.
+ * @param url - The string to check.
+ * @returns True if valid URL, false otherwise.
  */
 export function isValidUrl(url: string): boolean {
   try {
@@ -231,6 +243,11 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
+/**
+ * Checks if a string is a valid email address.
+ * @param email - The string to check.
+ * @returns True if valid email, false otherwise.
+ */
 export function isValidEmail(email: string): boolean {
   if (!email) return false;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

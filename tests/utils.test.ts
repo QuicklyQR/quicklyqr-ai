@@ -39,7 +39,9 @@ describe('utils', () => {
     });
 
     it('should handle multiple object notations', () => {
-      expect(cn({ primary: true }, { secondary: true }, { disabled: false })).toBe('primary secondary');
+      expect(cn({ primary: true }, { secondary: true }, { disabled: false })).toBe(
+        'primary secondary'
+      );
     });
 
     it('should properly merge tailwind classes with tailwind-merge', () => {

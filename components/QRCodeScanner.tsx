@@ -1,32 +1,25 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Camera, X, Check, AlertCircle } from 'lucide-react';
-import { QRData, createInitialQRData } from '../lib/qr-utils';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Camera, X, AlertCircle } from 'lucide-react';
 
 interface QRCodeScannerProps {
   onScanSuccess: (data: string) => void;
   onClose: () => void;
 }
 
-const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScanSuccess, onClose }) => {
-  const [error, setError] = useState<string | null>(null);
-  const [scanning, setScanning] = useState(false);
+// useCamera: handles camera setup/teardown and permission state
+function useCamera(videoRef: React.RefObject<HTMLVideoElement | null>) {
   const [permission, setPermission] = useState<boolean | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Request camera permission and setup video stream
   useEffect(() => {
     const setupCamera = async () => {
       try {
-        setScanning(true);
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment' },
           audio: false,
         });
-
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           setPermission(true);
@@ -38,41 +31,52 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScanSuccess, onClose })
         setError('Camera access denied. Please allow camera access to scan QR codes.');
       }
     };
-
     setupCamera();
-
-    // Cleanup function to stop all streams when component unmounts
     return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
+      const video = videoRef.current;
+      if (video && video.srcObject) {
+        const stream = video.srcObject as MediaStream;
         const tracks = stream.getTracks();
         tracks.forEach((track) => track.stop());
       }
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
     };
-  }, []);
+  }, [videoRef]);
 
-  // Start QR code detection when video is ready
-  const handleVideoPlay = () => {
+  return { permission, error };
+}
+
+// useQRDetection: handles QR detection loop and throttling
+function useQRDetection({
+  videoRef,
+  canvasRef,
+  scanning,
+  onScanSuccess,
+}: {
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  scanning: boolean;
+  onScanSuccess: (data: string) => void;
+}) {
+  const animationRef = useRef<number | null>(null);
+  const lastDetectionTime = useRef<number>(0);
+
+  const handleVideoPlay = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
-
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d', { willReadFrequently: true });
     if (!context) return;
-
     const detectQRCode = async () => {
       if (!videoRef.current || !canvasRef.current || !context) return;
-
+      const now = Date.now();
+      if (now - lastDetectionTime.current < 150) {
+        animationRef.current = requestAnimationFrame(detectQRCode);
+        return;
+      }
+      lastDetectionTime.current = now;
       try {
-        // Only process frames if video is playing and scanner is active
         if (videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && scanning) {
-          // Set canvas dimensions to match video
           canvas.width = videoRef.current.videoWidth;
           canvas.height = videoRef.current.videoHeight;
-
-          // Draw current video frame to canvas
           context.drawImage(
             videoRef.current,
             0,
@@ -80,27 +84,20 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScanSuccess, onClose })
             videoRef.current.videoWidth,
             videoRef.current.videoHeight
           );
-
-          // Get image data for QR code detection
           const imageData = context.getImageData(
             0,
             0,
             videoRef.current.videoWidth,
             videoRef.current.videoHeight
           );
-
-          // Use BarcodeDetector API if available
           if ('BarcodeDetector' in window) {
             try {
-              // @ts-ignore - BarcodeDetector is not in TypeScript's lib.dom yet
+              // @ts-expect-error - BarcodeDetector is not in TypeScript's lib.dom yet
               const barcodeDetector = new BarcodeDetector({
                 formats: ['qr_code'],
               });
-
               const barcodes = await barcodeDetector.detect(imageData);
               if (barcodes.length > 0) {
-                // QR code detected
-                setScanning(false);
                 onScanSuccess(barcodes[0].rawValue);
                 return;
               }
@@ -112,16 +109,55 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScanSuccess, onClose })
       } catch (err) {
         console.error('QR detection error:', err);
       }
-
-      // Continue scanning if no QR code was detected
       if (scanning) {
         animationRef.current = requestAnimationFrame(detectQRCode);
       }
     };
-
-    // Start the detection loop
     detectQRCode();
-  };
+  }, [videoRef, canvasRef, scanning, onScanSuccess]);
+
+  // Cleanup animation frame on unmount
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+    };
+  }, []);
+
+  return { handleVideoPlay };
+}
+
+// useQRScanning: manages scanning state
+function useQRScanning() {
+  const [scanning, setScanning] = useState(false);
+  const startScanning = () => setScanning(true);
+  const stopScanning = () => setScanning(false);
+  return { scanning, startScanning, stopScanning };
+}
+
+const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScanSuccess, onClose }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { scanning, startScanning, stopScanning } = useQRScanning();
+  const { permission, error } = useCamera(videoRef);
+  const { handleVideoPlay } = useQRDetection({
+    videoRef,
+    canvasRef,
+    scanning,
+    onScanSuccess: (data) => {
+      stopScanning();
+      onScanSuccess(data);
+    },
+  });
+
+  // Start scanning when permission is granted
+  useEffect(() => {
+    if (permission) startScanning();
+    else stopScanning();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permission]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
@@ -136,7 +172,6 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScanSuccess, onClose })
             <X className="h-6 w-6" />
           </button>
         </div>
-
         {error && (
           <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
             <div className="flex">
@@ -145,7 +180,6 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScanSuccess, onClose })
             </div>
           </div>
         )}
-
         <div className="relative aspect-video overflow-hidden rounded-lg bg-gray-100">
           {permission === false ? (
             <div className="flex h-full flex-col items-center justify-center p-4 text-center">
@@ -169,11 +203,9 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScanSuccess, onClose })
             </>
           )}
         </div>
-
         <div className="mt-4 text-center text-sm text-gray-600">
           <p>Position the QR code within the frame to scan</p>
         </div>
-
         <div className="mt-4 flex justify-end space-x-2">
           <button
             onClick={onClose}
