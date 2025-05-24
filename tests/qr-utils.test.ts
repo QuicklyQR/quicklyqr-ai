@@ -219,6 +219,36 @@ describe('qr-utils', () => {
       expect(result.errors).toContain('Invalid URL format');
     });
 
+    it('should validate vCard with empty email', () => {
+      const result = validateQRData({
+        type: 'vcard',
+        vcard: {
+          firstName: 'John',
+          lastName: 'Doe',
+          phone: '123456789',
+          email: '',
+          organization: 'Company',
+          url: 'https://example.com',
+        },
+      });
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should validate vCard with empty URL', () => {
+      const result = validateQRData({
+        type: 'vcard',
+        vcard: {
+          firstName: 'John',
+          lastName: 'Doe',
+          phone: '123456789',
+          email: 'john@example.com',
+          organization: 'Company',
+          url: '',
+        },
+      });
+      expect(result.isValid).toBe(true);
+    });
+
     it('should invalidate missing vCard data', () => {
       const result = validateQRData({ type: 'vcard' });
       expect(result.isValid).toBe(false);
@@ -299,6 +329,24 @@ describe('qr-utils', () => {
     it('should generate empty string for unknown type', () => {
       const result = generateQRString({ type: 'unknown' as QRDataType });
       expect(result).toBe('');
+    });
+
+    it('should generate vCard with minimal information', () => {
+      const result = generateQRString({
+        type: 'vcard',
+        vcard: {
+          firstName: 'John',
+          lastName: '',
+          phone: '',
+          email: '',
+          organization: '',
+          url: '',
+        },
+      });
+      expect(result).toContain('BEGIN:VCARD');
+      expect(result).toContain('FN:John ');
+      expect(result).toContain('N:;John;;;');
+      expect(result).toContain('END:VCARD');
     });
   });
 

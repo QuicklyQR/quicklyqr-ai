@@ -34,6 +34,14 @@ describe('utils', () => {
       ).toBe('base class1 class2 active');
     });
 
+    it('should handle nested arrays', () => {
+      expect(cn(['base', ['nested1', 'nested2']])).toBe('base nested1 nested2');
+    });
+
+    it('should handle multiple object notations', () => {
+      expect(cn({ primary: true }, { secondary: true }, { disabled: false })).toBe('primary secondary');
+    });
+
     it('should properly merge tailwind classes with tailwind-merge', () => {
       expect(cn('px-2 py-1', 'px-4')).toBe('py-1 px-4');
       expect(cn('text-red-500', 'text-blue-500')).toBe('text-blue-500');
