@@ -536,18 +536,12 @@ describe('qr-utils', () => {
   
   describe('isValidUrl function', () => {
     it('should validate correct URLs', () => {
-      // Access the private function using type casting
-      const isValidUrl = (qr_utils as any).isValidUrl;
-      
       expect(isValidUrl('https://example.com')).toBe(true);
       expect(isValidUrl('http://localhost:3000')).toBe(true);
       expect(isValidUrl('https://sub.domain.co.uk/path?query=value#hash')).toBe(true);
     });
     
     it('should invalidate incorrect URLs', () => {
-      // Access the private function using type casting
-      const isValidUrl = (qr_utils as any).isValidUrl;
-      
       expect(isValidUrl('')).toBe(false);
       expect(isValidUrl('not-a-url')).toBe(false);
       expect(isValidUrl('http://')).toBe(false);
@@ -555,11 +549,8 @@ describe('qr-utils', () => {
     });
     
     it('should handle edge cases in URL validation', () => {
-      // Access the private function using type casting
-      const isValidUrl = (qr_utils as any).isValidUrl;
-      
-      expect(isValidUrl(null)).toBe(false);
-      expect(isValidUrl(undefined)).toBe(false);
+      expect(isValidUrl(null as any)).toBe(false);
+      expect(isValidUrl(undefined as any)).toBe(false);
       // @ts-ignore - Testing runtime behavior with invalid input
       expect(isValidUrl(123)).toBe(false);
     });
@@ -567,18 +558,12 @@ describe('qr-utils', () => {
   
   describe('isValidEmail function', () => {
     it('should validate correct email addresses', () => {
-      // Access the private function using type casting
-      const isValidEmail = (qr_utils as any).isValidEmail;
-      
       expect(isValidEmail('user@example.com')).toBe(true);
       expect(isValidEmail('name.surname@domain.co.uk')).toBe(true);
       expect(isValidEmail('user+tag@example.com')).toBe(true);
     });
     
     it('should invalidate incorrect email addresses', () => {
-      // Access the private function using type casting
-      const isValidEmail = (qr_utils as any).isValidEmail;
-      
       expect(isValidEmail('')).toBe(false);
       expect(isValidEmail('not-an-email')).toBe(false);
       expect(isValidEmail('user@')).toBe(false);
@@ -587,11 +572,8 @@ describe('qr-utils', () => {
     });
     
     it('should handle edge cases in email validation', () => {
-      // Access the private function using type casting
-      const isValidEmail = (qr_utils as any).isValidEmail;
-      
-      expect(isValidEmail(null)).toBe(false);
-      expect(isValidEmail(undefined)).toBe(false);
+      expect(isValidEmail(null as any)).toBe(false);
+      expect(isValidEmail(undefined as any)).toBe(false);
       // @ts-ignore - Testing runtime behavior with invalid input
       expect(isValidEmail(123)).toBe(false);
     });

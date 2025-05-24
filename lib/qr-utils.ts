@@ -221,7 +221,7 @@ export function convertToQRCodeStylingOptions(options: QROptions, data: string) 
 /**
  * Utility functions for validation
  */
-function isValidUrl(url: string): boolean {
+export function isValidUrl(url: string): boolean {
   try {
     if (!url) return false;
     new URL(url);
@@ -231,7 +231,7 @@ function isValidUrl(url: string): boolean {
   }
 }
 
-function isValidEmail(email: string): boolean {
+export function isValidEmail(email: string): boolean {
   if (!email) return false;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
