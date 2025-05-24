@@ -249,6 +249,21 @@ describe('qr-utils', () => {
       expect(result.isValid).toBe(true);
     });
 
+    it('should validate vCard with empty phone', () => {
+      const result = validateQRData({
+        type: 'vcard',
+        vcard: {
+          firstName: 'John',
+          lastName: 'Doe',
+          phone: '',
+          email: 'john@example.com',
+          organization: 'Company',
+          url: 'https://example.com',
+        },
+      });
+      expect(result.isValid).toBe(true);
+    });
+
     it('should invalidate missing vCard data', () => {
       const result = validateQRData({ type: 'vcard' });
       expect(result.isValid).toBe(false);
