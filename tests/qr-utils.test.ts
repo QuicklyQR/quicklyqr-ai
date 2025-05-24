@@ -406,6 +406,15 @@ describe('qr-utils', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('WiFi data is required');
     });
+    
+    it('should handle validation for text with undefined text property', () => {
+      const result = validateQRData({ 
+        type: 'text',
+        text: undefined 
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Text content is required');
+    });
   });
 
   describe('getDefaultQROptions', () => {
