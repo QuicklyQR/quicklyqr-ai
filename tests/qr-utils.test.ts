@@ -363,6 +363,24 @@ describe('qr-utils', () => {
       expect(result).toContain('N:;John;;;');
       expect(result).toContain('END:VCARD');
     });
+    
+    it('should generate vCard with only last name', () => {
+      const result = generateQRString({
+        type: 'vcard',
+        vcard: {
+          firstName: '',
+          lastName: 'Doe',
+          phone: '',
+          email: '',
+          organization: '',
+          url: '',
+        },
+      });
+      expect(result).toContain('BEGIN:VCARD');
+      expect(result).toContain('FN: Doe');
+      expect(result).toContain('N:Doe;;;;');
+      expect(result).toContain('END:VCARD');
+    });
   });
 
   describe('getDefaultQROptions', () => {
