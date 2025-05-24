@@ -381,6 +381,12 @@ describe('qr-utils', () => {
       expect(result).toContain('N:Doe;;;;');
       expect(result).toContain('END:VCARD');
     });
+    
+    it('should handle validation for unknown QR data type', () => {
+      const result = validateQRData({ type: 'unknown' as QRDataType });
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
   });
 
   describe('getDefaultQROptions', () => {
