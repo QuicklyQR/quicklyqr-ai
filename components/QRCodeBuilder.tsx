@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Download, Wifi, User, Link, Type, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Download, Wifi, User, Link, Type, AlertCircle, Eye, EyeOff, Camera } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import QRCodeStyling from 'qr-code-styling';
 import {
   QRData,
@@ -79,6 +80,11 @@ const useQRCode = (qrString: string, options: QROptions) => {
   return { qrInstance, containerRef, isLoading };
 };
 
+// Dynamically import the scanner component to avoid SSR issues with browser APIs
+const QRCodeScanner = dynamic(() => import('./QRCodeScanner'), {
+  ssr: false,
+});
+
 const QRCodeBuilder: React.FC = () => {
   const [qrData, setQrData] = useState<QRData>(createInitialQRData('url'));
   const [qrOptions, setQrOptions] = useState<QROptions>(getDefaultQROptions());
@@ -87,6 +93,7 @@ const QRCodeBuilder: React.FC = () => {
   const [canGenerate, setCanGenerate] = useState(false);
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
   // Handle field touch for validation timing
   const handleFieldTouch = useCallback((fieldName: string) => {
@@ -127,6 +134,93 @@ const QRCodeBuilder: React.FC = () => {
       alert('Failed to download QR code. Please try again.');
     } finally {
       setIsGenerating(false);
+    }
+  };
+  
+  // Handle successful QR code scan
+  const handleScanSuccess = (scannedData: string) => {
+    try {
+      // Try to detect the QR code type and parse the data
+      if (scannedData.startsWith('BEGIN:VCARD') && scannedData.includes('END:VCARD')) {
+        // vCard format
+        const newData = createInitialQRData('vcard');
+        
+        // Extract name
+        const fnMatch = scannedData.match(/FN:(.*?)(?:\r?\n|$)/);
+        const nameMatch = scannedData.match(/N:(.*?)(?:\r?\n|$)/);
+        
+        if (fnMatch && fnMatch[1]) {
+          const nameParts = fnMatch[1].trim().split(' ');
+          if (nameParts.length > 0) {
+            newData.vcard!.firstName = nameParts[0] || '';
+            newData.vcard!.lastName = nameParts.slice(1).join(' ') || '';
+          }
+        } else if (nameMatch && nameMatch[1]) {
+          const nameParts = nameMatch[1].split(';');
+          newData.vcard!.lastName = nameParts[0] || '';
+          newData.vcard!.firstName = nameParts[1] || '';
+        }
+        
+        // Extract other fields
+        const telMatch = scannedData.match(/TEL(?:;[^:]*)?:(.*?)(?:\r?\n|$)/);
+        if (telMatch) newData.vcard!.phone = telMatch[1].trim();
+        
+        const emailMatch = scannedData.match(/EMAIL(?:;[^:]*)?:(.*?)(?:\r?\n|$)/);
+        if (emailMatch) newData.vcard!.email = emailMatch[1].trim();
+        
+        const orgMatch = scannedData.match(/ORG:(.*?)(?:\r?\n|$)/);
+        if (orgMatch) newData.vcard!.organization = orgMatch[1].trim();
+        
+        const urlMatch = scannedData.match(/URL:(.*?)(?:\r?\n|$)/);
+        if (urlMatch) newData.vcard!.url = urlMatch[1].trim();
+        
+        setQrData(newData);
+        setTouchedFields({});
+      } else if (scannedData.startsWith('WIFI:')) {
+        // WiFi format
+        const newData = createInitialQRData('wifi');
+        
+        const securityMatch = scannedData.match(/T:([^;]*)/);
+        if (securityMatch) {
+          newData.wifi!.security = (securityMatch[1] === 'WPA' || securityMatch[1] === 'WEP') 
+            ? securityMatch[1] 
+            : 'nopass';
+        }
+        
+        const ssidMatch = scannedData.match(/S:([^;]*)/);
+        if (ssidMatch) newData.wifi!.ssid = ssidMatch[1];
+        
+        const passwordMatch = scannedData.match(/P:([^;]*)/);
+        if (passwordMatch) newData.wifi!.password = passwordMatch[1];
+        
+        const hiddenMatch = scannedData.match(/H:([^;]*)/);
+        if (hiddenMatch) newData.wifi!.hidden = hiddenMatch[1].toLowerCase() === 'true';
+        
+        setQrData(newData);
+        setTouchedFields({});
+      } else if (scannedData.match(/^https?:\/\//)) {
+        // URL format
+        const newData = createInitialQRData('url');
+        newData.url = scannedData;
+        setQrData(newData);
+        setTouchedFields({});
+      } else {
+        // Default to text
+        const newData = createInitialQRData('text');
+        newData.text = scannedData;
+        setQrData(newData);
+        setTouchedFields({});
+      }
+      
+      setShowScanner(false);
+    } catch (error) {
+      console.error('Failed to parse scanned QR code:', error);
+      // Fall back to text format
+      const newData = createInitialQRData('text');
+      newData.text = scannedData;
+      setQrData(newData);
+      setTouchedFields({});
+      setShowScanner(false);
     }
   };
 
@@ -623,20 +717,33 @@ const QRCodeBuilder: React.FC = () => {
               </div>
             </div>
 
-            {/* Download Button */}
-            <button
-              onClick={handleDownload}
-              disabled={!canGenerate || isGenerating}
-              className={`flex w-full items-center justify-center rounded-lg px-6 py-3 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                !canGenerate || isGenerating
-                  ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
-              aria-label={isGenerating ? 'Generating QR code' : 'Download QR code as PNG'}
-            >
-              <Download className="mr-2 h-5 w-5" aria-hidden="true" />
-              {isGenerating ? 'Generating...' : 'Download PNG'}
-            </button>
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Download Button */}
+              <button
+                onClick={handleDownload}
+                disabled={!canGenerate || isGenerating}
+                className={`flex items-center justify-center rounded-lg px-6 py-3 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  !canGenerate || isGenerating
+                    ? 'cursor-not-allowed bg-gray-100 text-gray-400'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+                aria-label={isGenerating ? 'Generating QR code' : 'Download QR code as PNG'}
+              >
+                <Download className="mr-2 h-5 w-5" aria-hidden="true" />
+                {isGenerating ? 'Generating...' : 'Download'}
+              </button>
+              
+              {/* Scan Button */}
+              <button
+                onClick={() => setShowScanner(true)}
+                className="flex items-center justify-center rounded-lg border-2 border-blue-600 bg-white px-6 py-3 font-medium text-blue-600 transition-colors hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                aria-label="Scan QR code with camera"
+              >
+                <Camera className="mr-2 h-5 w-5" aria-hidden="true" />
+                Scan QR
+              </button>
+            </div>
 
             {/* Info Section */}
             {canGenerate && (
@@ -656,6 +763,14 @@ const QRCodeBuilder: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* QR Code Scanner Modal */}
+      {showScanner && (
+        <QRCodeScanner 
+          onScanSuccess={handleScanSuccess} 
+          onClose={() => setShowScanner(false)} 
+        />
+      )}
     </div>
   );
 };
