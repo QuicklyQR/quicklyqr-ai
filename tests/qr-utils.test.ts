@@ -396,6 +396,12 @@ describe('qr-utils', () => {
       });
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Contact data is required');
+      
+      // Test the early return behavior
+      const spy = vi.spyOn(console, 'log');
+      validateQRData({ type: 'vcard', vcard: undefined });
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
     });
     
     it('should handle validation for undefined WiFi data properties', () => {

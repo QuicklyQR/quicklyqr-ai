@@ -105,6 +105,7 @@ export function validateQRData(data: QRData): { isValid: boolean; errors: string
     case 'vcard':
       if (!data.vcard) {
         errors.push('Contact data is required');
+        return { isValid: false, errors };
       } else {
         if (!data.vcard.firstName.trim() && !data.vcard.lastName.trim()) {
           errors.push('At least first name or last name is required');
