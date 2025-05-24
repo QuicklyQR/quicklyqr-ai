@@ -38,6 +38,10 @@ export interface QROptions {
  * Generates QR code data string based on type and content
  */
 export function generateQRString(data: QRData): string {
+  if (!data || !data.type) {
+    return '';
+  }
+  
   switch (data.type) {
     case 'url':
       return data.url || '';
@@ -73,6 +77,16 @@ END:VCARD`;
  */
 export function validateQRData(data: QRData): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
+  
+  if (!data) {
+    errors.push('Invalid QR data');
+    return { isValid: false, errors };
+  }
+  
+  if (!data.type) {
+    errors.push('Invalid QR data type');
+    return { isValid: false, errors };
+  }
 
   switch (data.type) {
     case 'url':
@@ -209,6 +223,7 @@ export function convertToQRCodeStylingOptions(options: QROptions, data: string) 
  */
 function isValidUrl(url: string): boolean {
   try {
+    if (!url) return false;
     new URL(url);
     return true;
   } catch {
@@ -217,6 +232,7 @@ function isValidUrl(url: string): boolean {
 }
 
 function isValidEmail(email: string): boolean {
+  if (!email) return false;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
