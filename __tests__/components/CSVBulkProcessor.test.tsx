@@ -42,7 +42,7 @@ const TestCSVUpload = ({ onUpload }: { onUpload: (data: any[], headers: string[]
 
   return (
     <div data-testid="csv-upload">
-      <button onClick={handleTestUpload} data-testid="upload-csv-btn">
+      <button onClick={handleTestUpload}>
         Upload CSV
       </button>
       <div>Drag and drop CSV file here or click to browse</div>
@@ -89,7 +89,7 @@ const TestCSVPreview = ({
       <div>Preview Data: {data.length} rows</div>
       <div>Headers: {headers.join(', ')}</div>
       <div>Processing Options: Size {processingOptions.qrSize}px</div>
-      <button onClick={handleStartProcessing} data-testid="start-processing-btn">
+      <button onClick={handleStartProcessing} data-testid="start-processing-button">
         Start Processing
       </button>
     </div>
@@ -168,7 +168,7 @@ describe('CSVBulkProcessor', () => {
     it('should advance to preview stage after CSV upload', async () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
@@ -180,7 +180,7 @@ describe('CSVBulkProcessor', () => {
     it('should show correct progress bar at preview stage', async () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
@@ -193,15 +193,15 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Upload CSV
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       // Start processing
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByTestId('start-processing-button')).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByTestId('start-processing-button');
       await user.click(processButton);
       
       await waitFor(() => {
@@ -214,14 +214,14 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Upload and start processing
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByTestId('start-processing-button')).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByTestId('start-processing-button');
       await user.click(processButton);
       
       await waitFor(() => {
@@ -234,15 +234,15 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Upload CSV
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       // Start processing
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByTestId('start-processing-button')).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByTestId('start-processing-button');
       await user.click(processButton);
       
       // Wait for processing to complete
@@ -256,14 +256,14 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Complete full workflow
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByTestId('start-processing-button')).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByTestId('start-processing-button');
       await user.click(processButton);
       
       await waitFor(() => {
@@ -277,7 +277,7 @@ describe('CSVBulkProcessor', () => {
     it('should display uploaded CSV file information', async () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
@@ -289,7 +289,7 @@ describe('CSVBulkProcessor', () => {
     it('should pass CSV data to preview component', async () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
@@ -314,7 +314,7 @@ describe('CSVBulkProcessor', () => {
         />
       );
       
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
@@ -333,7 +333,7 @@ describe('CSVBulkProcessor', () => {
         />
       );
       
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
@@ -346,7 +346,7 @@ describe('CSVBulkProcessor', () => {
     it('should show back button in preview stage', async () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
@@ -364,14 +364,14 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Upload and start processing
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByTestId('start-processing-button')).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByTestId('start-processing-button');
       await user.click(processButton);
       
       await waitFor(() => {
@@ -384,7 +384,7 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Go to preview stage
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
@@ -405,7 +405,7 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Upload CSV
-      const uploadButton = screen.getByTestId('upload-csv-btn');
+      const uploadButton = screen.getByRole('button', { name: /browse/i });
       await user.click(uploadButton);
       
       await waitFor(() => {
@@ -431,10 +431,10 @@ describe('CSVBulkProcessor', () => {
       await user.click(uploadButton);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByTestId('start-processing-button')).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByTestId('start-processing-button');
       await user.click(processButton);
       
       await waitFor(() => {
@@ -451,10 +451,10 @@ describe('CSVBulkProcessor', () => {
       await user.click(uploadButton);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByTestId('start-processing-button')).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByTestId('start-processing-button');
       await user.click(processButton);
       
       await waitFor(() => {
@@ -471,10 +471,10 @@ describe('CSVBulkProcessor', () => {
       await user.click(uploadButton);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByTestId('start-processing-button')).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByTestId('start-processing-button');
       await user.click(processButton);
       
       await waitFor(() => {
