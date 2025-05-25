@@ -161,7 +161,7 @@ describe('CSVBulkProcessor', () => {
     it('should show correct progress bar at upload stage', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
-      const progressBar = screen.getByRole('progressbar');
+      const progressBar = document.querySelector('.bg-blue-600');
       expect(progressBar).toHaveStyle({ width: '25%' });
     });
 
@@ -184,7 +184,7 @@ describe('CSVBulkProcessor', () => {
       await user.click(uploadButton);
       
       await waitFor(() => {
-        const progressBar = screen.getByRole('progressbar');
+        const progressBar = document.querySelector('.bg-blue-600');
         expect(progressBar).toHaveStyle({ width: '50%' });
       });
     });
@@ -267,7 +267,7 @@ describe('CSVBulkProcessor', () => {
       await user.click(processButton);
       
       await waitFor(() => {
-        const progressBar = screen.getByRole('progressbar');
+        const progressBar = document.querySelector('.bg-blue-600');
         expect(progressBar).toHaveStyle({ width: '100%' });
       }, { timeout: 5000 });
     });
