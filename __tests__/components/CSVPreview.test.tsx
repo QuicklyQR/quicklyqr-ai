@@ -501,9 +501,14 @@ describe('CSVPreview Component', () => {
         expect(completedResults.length).toBe(1);
       }, { timeout: 5000 });
       
-      // Check that status icon is displayed (success or error)
-      const statusIcons = screen.getAllByRole('img', { hidden: true });
-      expect(statusIcons.length).toBeGreaterThan(0);
+      // Check that status is displayed (look for SVG icons or error text)
+      const statusCell = screen.getByTestId('row-0').querySelector('td:nth-child(2)');
+      expect(statusCell).toBeInTheDocument();
+      
+      // Should have either an SVG icon or error text
+      const hasSvg = statusCell?.querySelector('svg') !== null;
+      const hasErrorText = statusCell?.textContent?.includes('Error') || false;
+      expect(hasSvg || hasErrorText).toBe(true);
     });
   });
 
