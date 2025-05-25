@@ -234,9 +234,7 @@ export function convertToQRCodeStylingOptions(options: QROptions, data: string) 
   };
 
   // Add logo if present
-  }
-
-  return baseOptions;
+  
   return baseOptions;
 
 /**
