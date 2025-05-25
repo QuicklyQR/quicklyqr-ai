@@ -32,6 +32,9 @@ export interface QROptions {
   foregroundColor: string;
   backgroundColor: string;
   errorCorrectionLevel: ErrorCorrectionLevel;
+  logoFile?: File;
+  logoSize?: number;
+  logoMargin?: number;
 }
 
 /**
@@ -189,9 +192,12 @@ export function createInitialQRData(type: QRDataType): QRData {
 export function getDefaultQROptions(): QROptions {
   return {
     size: 300,
-    foregroundColor: '#000000',
-    backgroundColor: '#ffffff',
-    errorCorrectionLevel: 'M',
+    foregroundColor: "#000000",
+    backgroundColor: "#ffffff",
+    errorCorrectionLevel: "M",
+    logoFile: undefined,
+    logoSize: 0.4,
+    logoMargin: 0,
   };
 }
 
@@ -202,31 +208,36 @@ export function getDefaultQROptions(): QROptions {
  * @returns The options object for qr-code-styling.
  */
 export function convertToQRCodeStylingOptions(options: QROptions, data: string) {
-  return {
+  const baseOptions = {
     width: options.size,
     height: options.size,
-    type: 'canvas' as const,
+    type: "canvas" as const,
     data,
     dotsOptions: {
       color: options.foregroundColor,
-      type: 'rounded' as const,
+      type: "rounded" as const,
     },
     backgroundOptions: {
       color: options.backgroundColor,
     },
     cornersSquareOptions: {
       color: options.foregroundColor,
-      type: 'extra-rounded' as const,
+      type: "extra-rounded" as const,
     },
     cornersDotOptions: {
       color: options.foregroundColor,
-      type: 'dot' as const,
+      type: "dot" as const,
     },
     qrOptions: {
       errorCorrectionLevel: options.errorCorrectionLevel,
     },
   };
-}
+
+  // Add logo if present
+  }
+
+  return baseOptions;
+  return baseOptions;
 
 /**
  * Checks if a string is a valid URL.
@@ -273,3 +284,39 @@ export const QR_DATA_TYPES = {
   wifi: { label: 'WiFi', icon: 'Wifi' },
   vcard: { label: 'Contact', icon: 'User' },
 } as const;
+
+/**
+ * Positions logo in bottom-right corner of QR code canvas
+ */
+export async function positionLogoBottomRight(canvas: HTMLCanvasElement, logoFile: File, logoSize: number = 0.2): Promise<void> {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const img = new Image();
+  const logoUrl = URL.createObjectURL(logoFile);
+  
+  return new Promise((resolve) => {
+    img.onload = () => {
+      const canvasSize = canvas.width;
+      const logoPixelSize = canvasSize * logoSize;
+      
+      // Position in bottom-right corner with margin
+      const margin = 20;
+      const x = canvasSize - logoPixelSize - margin;
+      const y = canvasSize - logoPixelSize - margin;
+      
+      // Create rounded background for logo
+      ctx.beginPath();
+      ctx.roundRect(x - 5, y - 5, logoPixelSize + 10, logoPixelSize + 10, 8);
+      ctx.fillStyle = 'white';
+      ctx.fill();
+      
+      // Draw logo
+      ctx.drawImage(img, x, y, logoPixelSize, logoPixelSize);
+      
+      URL.revokeObjectURL(logoUrl);
+      resolve();
+    };
+    img.src = logoUrl;
+  });
+}
