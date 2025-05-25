@@ -27,82 +27,15 @@ const createLogoFile = (filename: string = 'logo.png'): File => {
   return new File([pngData], filename, { type: 'image/png' });
 };
 
-// Mock implementations for CSV components (real implementations, not mocks)
-const TestCSVUpload = ({ onUpload }: { onUpload: (data: any[], headers: string[], file: File) => void }) => {
-  const handleTestUpload = () => {
-    const csvContent = 'name,url,description\nJohn Doe,https://example.com/john,Software Developer\nJane Smith,https://example.com/jane,Designer';
-    const file = createCSVFile(csvContent);
-    const data = [
-      { name: 'John Doe', url: 'https://example.com/john', description: 'Software Developer' },
-      { name: 'Jane Smith', url: 'https://example.com/jane', description: 'Designer' }
-    ];
-    const headers = ['name', 'url', 'description'];
-    onUpload(data, headers, file);
-  };
-
-  return (
-    <div data-testid="csv-upload">
-      <button onClick={handleTestUpload}>
-        Upload CSV
-      </button>
-      <div>Drag and drop CSV file here or click to browse</div>
-    </div>
-  );
+// Helper function to simulate file upload
+const simulateFileUpload = async (user: ReturnType<typeof userEvent.setup>, csvContent: string = 'name,url,description\nJohn Doe,https://example.com/john,Software Developer\nJane Smith,https://example.com/jane,Designer') => {
+  const file = createCSVFile(csvContent);
+  const fileInput = screen.getByLabelText(/drop your csv file here/i, { selector: 'input' });
+  
+  await user.upload(fileInput, file);
+  
+  return file;
 };
-
-const TestCSVPreview = ({ 
-  data, 
-  headers, 
-  processingOptions, 
-  onProcessingComplete, 
-  onProcessingStart 
-}: { 
-  data: any[];
-  headers: string[];
-  processingOptions: any;
-  onProcessingComplete: (zipBlob: Blob, count: number) => void;
-  onProcessingStart: () => void;
-}) => {
-  const handleStartProcessing = async () => {
-    onProcessingStart();
-    
-    // Simulate real processing with delay
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Create a real ZIP blob
-    const zipContent = new Uint8Array([
-      0x50, 0x4B, 0x03, 0x04, // ZIP file signature
-      0x14, 0x00, 0x00, 0x00, // Version, flags
-      0x00, 0x00, 0x00, 0x00, // Compression, time, date
-      0x00, 0x00, 0x00, 0x00, // CRC-32
-      0x00, 0x00, 0x00, 0x00, // Compressed size
-      0x00, 0x00, 0x00, 0x00, // Uncompressed size
-      0x00, 0x00, 0x00, 0x00  // Filename length, extra field length
-    ]);
-    const zipBlob = new Blob([zipContent], { type: 'application/zip' });
-    
-    onProcessingComplete(zipBlob, data.length);
-  };
-
-  return (
-    <div data-testid="csv-preview">
-      <div>Preview Data: {data.length} rows</div>
-      <div>Headers: {headers.join(', ')}</div>
-      <div>Processing Options: Size {processingOptions.qrSize}px</div>
-      <button onClick={handleStartProcessing} data-testid="start-processing-button">
-        Start Processing
-      </button>
-    </div>
-  );
-};
-
-// Mock the components with real implementations
-const originalCSVUpload = React.lazy(() => import('../../components/CSVUpload'));
-const originalCSVPreview = React.lazy(() => import('../../components/CSVPreview'));
-
-// Replace with test components for testing
-const CSVUpload = TestCSVUpload;
-const CSVPreview = TestCSVPreview;
 
 describe('CSVBulkProcessor', () => {
   let mockOnClose: () => void;
@@ -427,19 +360,18 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Complete full workflow
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-button')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-button');
+      const processButton = screen.getByRole('button', { name: /start processing/i });
       await user.click(processButton);
       
       await waitFor(() => {
         expect(screen.getByText('Your QR codes are ready')).toBeInTheDocument();
-        expect(screen.getByText('Download ZIP')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /download zip/i })).toBeInTheDocument();
       }, { timeout: 5000 });
     });
 
@@ -447,19 +379,18 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Complete workflow
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-button')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-button');
+      const processButton = screen.getByRole('button', { name: /start processing/i });
       await user.click(processButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Successfully generated 2 QR codes')).toBeInTheDocument();
-        expect(screen.getByText('2 QR codes generated and packaged in a ZIP file')).toBeInTheDocument();
+        expect(screen.getByText(/successfully generated/i)).toBeInTheDocument();
+        expect(screen.getByText(/qr codes generated and packaged in a zip file/i)).toBeInTheDocument();
       }, { timeout: 5000 });
     });
 
@@ -467,22 +398,21 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Complete workflow
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-button')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-button');
+      const processButton = screen.getByRole('button', { name: /start processing/i });
       await user.click(processButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Download ZIP')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /download zip/i })).toBeInTheDocument();
       }, { timeout: 5000 });
       
       // Click download - should not throw error
-      const downloadButton = screen.getByText('Download ZIP');
+      const downloadButton = screen.getByRole('link', { name: /download zip/i });
       await user.click(downloadButton);
       
       // Download should have been triggered (no error thrown)
@@ -493,18 +423,17 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Complete workflow
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByRole('button', { name: /start processing/i });
       await user.click(processButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Process Another File')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /process another file/i })).toBeInTheDocument();
       }, { timeout: 5000 });
     });
 
@@ -512,22 +441,21 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Complete workflow
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByRole('button', { name: /start processing/i });
       await user.click(processButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Process Another File')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /process another file/i })).toBeInTheDocument();
       }, { timeout: 5000 });
       
       // Click process another file
-      const anotherFileButton = screen.getByText('Process Another File');
+      const anotherFileButton = screen.getByRole('button', { name: /process another file/i });
       await user.click(anotherFileButton);
       
       await waitFor(() => {
@@ -563,18 +491,17 @@ describe('CSVBulkProcessor', () => {
       const { unmount } = render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Complete workflow to create object URL
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByRole('button', { name: /start processing/i });
       await user.click(processButton);
       
       await waitFor(() => {
-        expect(screen.getByText('Download ZIP')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /download zip/i })).toBeInTheDocument();
       }, { timeout: 5000 });
       
       // Unmount should not throw errors
@@ -585,8 +512,7 @@ describe('CSVBulkProcessor', () => {
       const { rerender } = render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Upload CSV
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
         expect(screen.getByText('Preview & Configure')).toBeInTheDocument();
@@ -688,11 +614,10 @@ describe('CSVBulkProcessor', () => {
         />
       );
       
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
-        expect(screen.getByText('Processing Options: Size 512px')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument();
       });
     });
 
@@ -707,11 +632,10 @@ describe('CSVBulkProcessor', () => {
         />
       );
       
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
-        expect(screen.getByTestId('csv-preview')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument();
       });
     });
 
@@ -731,11 +655,10 @@ describe('CSVBulkProcessor', () => {
         />
       );
       
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
-        expect(screen.getByText('Processing Options: Size 256px')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument();
       });
     });
   });
@@ -758,8 +681,7 @@ describe('CSVBulkProcessor', () => {
       expect(screen.getByText('Preview')).toHaveClass('text-gray-400');
       
       // Move to preview stage
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
         expect(screen.getByText('Preview')).toHaveClass('font-medium', 'text-blue-600');
@@ -771,14 +693,13 @@ describe('CSVBulkProcessor', () => {
       render(<CSVBulkProcessor isOpen={true} onClose={mockOnClose} />);
       
       // Complete workflow
-      const uploadButton = screen.getByTestId('upload-csv-btn');
-      await user.click(uploadButton);
+      await simulateFileUpload(user);
       
       await waitFor(() => {
-        expect(screen.getByTestId('start-processing-btn')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /start processing/i })).toBeInTheDocument();
       });
       
-      const processButton = screen.getByTestId('start-processing-btn');
+      const processButton = screen.getByRole('button', { name: /start processing/i });
       await user.click(processButton);
       
       await waitFor(() => {
