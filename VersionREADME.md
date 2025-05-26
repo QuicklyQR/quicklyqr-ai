@@ -328,11 +328,12 @@ pnpm dev  # Should run at localhost:3000
 
 ---
 
-## 💡 FINAL INSTRUCTIONS FOR AI ASSISTANTS
-
-**Start Here**: Don't write tests immediately. First understand why CSVPreview works perfectly (36/36 tests) while CSVBulkProcessor fails. The difference in component architecture is the key.
-
-**Success Formula**: CSVPreview + Component Analysis + Zero Mocks = Working Tests
+First analyze CSVBulkProcessor component structure
+Compare with working CSVPreview component
+Create minimal render test to debug
+Apply CSVPreview's proven patterns with component-specific adjustments
+MCP Tools Understanding ✅
+Remove ANY AND ALL CSVPreview + Component Analysis + Zero Mocks = Working Tests
 
 **Goal**: Transform CSVBulkProcessor from "33/33 fake passing + 28 errors" to "33+ real passing + 0 errors" using the proven CSVPreview approach.
 
