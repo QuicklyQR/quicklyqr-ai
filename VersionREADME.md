@@ -1097,6 +1097,7 @@
 Additional Tools on Github- README's:
 
 https://github.com/QuicklyQR/quicklyqr-ai/blob/main/docs/claude-debug-assistant.txt
+https://github.com/QuicklyQR/quicklyqr-ai/blob/main/docs/debug-frontend-only.txt
 
 ## 🎯 **SUCCESS METRICS & COMPLETION CRITERIA**
 
