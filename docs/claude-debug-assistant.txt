@@ -1,0 +1,94 @@
+# Claude Debug Assistant – Full-Stack AI Debugging System
+
+This is a reusable Claude workflow to diagnose and resolve full-stack production issues using your active MCPs.
+
+---
+
+## 🔧 When to Use
+
+Trigger this workflow whenever a production error needs to be investigated — especially those involving:
+
+- QR generation
+- CSV uploads
+- ZIP creation
+- BullMQ queue failures
+- Redis cache TTLs
+- Low test coverage or failing tests
+
+---
+
+## 🧠 How to Run in Claude
+
+In Claude Desktop or Chat, say:
+
+> "Run Debug Assistant using the steps from [this file](https://github.com/yourorg/yourrepo/blob/main/docs/claude-debug-assistant.txt)"
+
+Or paste this entire workflow into the prompt box.
+
+---
+
+## 🧠 Debug Assistant Workflow (MCP Chain)
+
+1. **SentryMCP**
+   - Fetch the latest 1–3 frontend errors
+   - Summarize `title`, `culprit`, `message`, and `stack trace` if available
+
+2. **FilesystemMCP**
+   - Locate the files mentioned in the stack trace or `culprit`
+   - Read and analyze them
+
+3. **SemgrepMCP**
+   - Scan those files for:
+     - Blocking I/O
+     - Missing try/catch
+     - Hardcoded paths
+     - Async misuse
+     - Security issues in ZIP or file ops
+
+4. **MemoryMCP**
+   - Recall stored conventions, such as:
+     - Free user upload limits
+     - Retry/backoff logic for queues
+     - ZIP files must be in-memory only
+     - Never write to `/public`
+     - Worker files must end in `Worker.ts`
+
+5. **WebSearchMCP + WebFetchMCP**
+   - Search for the error message on Google
+   - Fetch the top result and summarize the recommended fix
+
+6. **GitMCP**
+   - Review recent commits touching the culprit file
+   - Flag untested changes or suspicious diffs
+
+7. **RedisMCP**
+   - Check for failed/stalled jobs in relevant queues (qr-jobs, zip-jobs, csv-parse)
+   - Retry jobs or inspect payloads for root causes
+   - Ensure TTL rules are followed
+
+8. **VitestMCP**
+   - Run all tests
+   - Report failures or regressions
+
+9. **CodeCoverageMCP**
+   - Check coverage on culprit files
+   - If under 80%, suggest tests for untested lines/branches
+
+10. **GitHubMCP**
+    - Check for open issues mentioning the error
+    - Optionally create a new issue or PR if a patch is needed
+
+---
+
+## 🧾 Final Report Should Include:
+
+- 🧠 Root cause
+- 💡 Proposed fix (with code if possible)
+- ✅ Test results
+- 📊 Coverage % and needed tests
+- 🔁 Git diff or changelog entries
+- 🧵 GitHub issue/PR status
+- 🧊 Redis queue insights
+- 🔒 Semgrep warnings
+- 🧠 Memory compliance
+- 📦 Next action: Deploy fix or open PR
