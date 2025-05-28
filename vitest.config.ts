@@ -9,6 +9,33 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     globals: true,
     include: ['tests/**/*.{test,spec}.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      exclude: [
+        'node_modules/',
+        'tests/',
+        '.next/',
+        'coverage/',
+        'build/',
+        'dist/',
+        '**/*.d.ts',
+        '**/*.config.*',
+        '**/next.config.*',
+        '**/tailwind.config.*',
+        '**/postcss.config.*',
+        '**/prettier.config.*',
+        '**/.eslintrc.*'
+      ],
+      thresholds: {
+        global: {
+          branches: 80,
+          functions: 80,
+          lines: 80,
+          statements: 80
+        }
+      }
+    },
   },
   resolve: {
     alias: {
