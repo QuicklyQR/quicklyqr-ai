@@ -1,0 +1,34 @@
+🔧 Run Debug Assistant – Frontend Only
+
+Use this streamlined workflow to investigate and fix the latest frontend crash:
+
+1. **SentryMCP**
+   - Fetch the latest 1 error from `quicklyqr-frontend`
+   - Summarize the `title`, `message`, and `stack trace` (if available)
+   - Identify the `culprit` file if listed
+
+2. **FilesystemMCP**
+   - Locate and open the `culprit` file (e.g. `/components`, `/pages`, `/utils`)
+   - Summarize what the file does
+   - Highlight suspicious code based on the error message
+
+3. **WebSearchMCP + WebFetchMCP**
+   - Search the full error message on Google
+   - Fetch and summarize the most relevant result
+   - Compare the fix online to the code in the `culprit` file
+
+4. **VitestMCP**
+   - Run tests in the affected area
+   - Report if anything fails
+   - Suggest improvements if no tests exist
+
+5. **CodeCoverageMCP**
+   - Check coverage on the `culprit` file
+   - If <80%, recommend test cases for missing logic
+
+Return a summary including:
+- ❗️ Root cause
+- 💡 Fix strategy
+- 🧪 Vitest results
+- 📊 Coverage check
+- ✅ Final action suggestion

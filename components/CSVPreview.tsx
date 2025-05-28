@@ -25,6 +25,15 @@ import {
   QROptions 
 } from '../lib/qr-utils';
 
+// Import the ProcessingOptions type from CSVBulkProcessor
+export interface ProcessingOptions {
+  logoFile?: File;
+  qrSize: number;
+  foregroundColor: string;
+  backgroundColor: string;
+  errorCorrectionLevel: 'L' | 'M' | 'Q' | 'H';
+}
+
 export interface CSVRow {
   id: string;
   originalIndex: number;
@@ -35,12 +44,13 @@ export interface CSVRow {
   qrCodeUrl?: string;
 }
 
+// Updated props to match CSVBulkProcessor expectations
 export interface CSVPreviewProps {
   data: any[];
   headers: string[];
-  onProcessComplete: (results: ProcessingResult[]) => void;
-  onCancel: () => void;
-  qrOptions?: QROptions;
+  processingOptions: ProcessingOptions;
+  onProcessingComplete: (zipBlob: Blob, processedCount: number) => void;
+  onProcessingStart: () => void;
 }
 
 export interface ProcessingResult {
@@ -60,10 +70,19 @@ export interface ProcessingProgress {
 const CSVPreview: React.FC<CSVPreviewProps> = ({
   data,
   headers,
-  onProcessComplete,
-  onCancel,
-  qrOptions = getDefaultQROptions()
+  processingOptions,
+  onProcessingComplete,
+  onProcessingStart,
 }) => {
+  // Convert processingOptions to QROptions format
+  const qrOptions: QROptions = {
+    size: processingOptions.qrSize,
+    foregroundColor: processingOptions.foregroundColor,
+    backgroundColor: processingOptions.backgroundColor,
+    errorCorrectionLevel: processingOptions.errorCorrectionLevel,
+    logoFile: processingOptions.logoFile,
+  };
+
   // Initialize rows with proper structure
   const [rows, setRows] = useState<CSVRow[]>(() =>
     data.map((item, index) => ({
@@ -109,7 +128,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     setRows(prevRows => prevRows.map(row => 
       row.id === rowId ? { ...row, selected: !row.selected } : row
     ));
-  }, [rows]);
+  }, []);
 
   // Generate QR code for a single data string
   const generateQRCode = useCallback(async (dataString: string): Promise<string> => {
@@ -177,10 +196,13 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     });
   }, [qrOptions]);
 
-  // Process selected rows
+  // Process selected rows and create ZIP file
   const startProcessing = useCallback(async () => {
     const selectedRows = rows.filter(row => row.selected);
     if (selectedRows.length === 0) return;
+
+    // Notify parent that processing has started
+    onProcessingStart();
 
     setIsProcessing(true);
     setIsPaused(false);
@@ -204,6 +226,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
       )
     );
 
+    // Process each row
     for (let i = 0; i < selectedRows.length; i++) {
       // Check if processing should stop
       if (processingRef.current.shouldStop) {
@@ -293,19 +316,52 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
       await new Promise(resolve => setTimeout(resolve, 50));
     }
 
-    setIsProcessing(false);
-    setIsPaused(false);
-    processingRef.current.shouldStop = false;
-    
-    // Update final progress
-    setProgress(prev => ({
-      ...prev,
-      current: undefined,
-    }));
+    // Create ZIP file from successful results
+    try {
+      const zip = new JSZip();
+      const successfulResults = results.filter(result => result.success && result.qrCodeDataUrl);
+      
+      for (const result of successfulResults) {
+        if (result.qrCodeDataUrl) {
+          // Convert data URL to blob
+          const response = await fetch(result.qrCodeDataUrl);
+          const blob = await response.blob();
+          
+          // Create filename from row data
+          const dataValue = result.row.data[qrField] || '';
+          const safeFilename = dataValue
+            .replace(/[^a-zA-Z0-9-_]/g, '_')
+            .substring(0, 50) || `qr_${result.row.originalIndex}`;
+          
+          zip.file(`${safeFilename}.png`, blob);
+        }
+      }
+      
+      // Generate ZIP blob
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      // Complete processing
+      setIsProcessing(false);
+      setIsPaused(false);
+      processingRef.current.shouldStop = false;
+      
+      // Update final progress
+      setProgress(prev => ({
+        ...prev,
+        current: undefined,
+      }));
 
-    // Call completion callback
-    onProcessComplete(results);
-  }, [rows, qrField, generateQRCode, onProcessComplete]);
+      // Call the parent's completion handler with ZIP blob and count
+      onProcessingComplete(zipBlob, successfulResults.length);
+      
+    } catch (error) {
+      console.error('Failed to create ZIP file:', error);
+      setIsProcessing(false);
+      setIsPaused(false);
+      // Still call the completion handler even if ZIP creation fails
+      onProcessingComplete(new Blob(), results.filter(r => r.success).length);
+    }
+  }, [rows, qrField, generateQRCode, onProcessingComplete, onProcessingStart]);
 
   // Pause processing
   const pauseProcessing = useCallback(() => {
@@ -332,7 +388,7 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
     });
   }, []);
 
-  // Download results as ZIP
+  // Download current results as ZIP (for manual downloads)
   const downloadResults = useCallback(async () => {
     const completedRows = rows.filter(row => row.status === 'completed' && row.qrCodeUrl);
     if (completedRows.length === 0) return;
@@ -610,16 +666,8 @@ const CSVPreview: React.FC<CSVPreviewProps> = ({
         </table>
       </div>
 
-      {/* Footer Actions */}
-      <div className="mt-6 flex justify-between items-center">
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-          data-testid="cancel-button"
-        >
-          Cancel
-        </button>
-        
+      {/* Footer */}
+      <div className="mt-6 text-center">
         <div className="text-sm text-gray-500">
           {!showPreview && rows.length > previewLimit && (
             <span>Showing {previewLimit} of {rows.length} rows</span>
