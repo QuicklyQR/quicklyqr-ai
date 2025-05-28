@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { X, FileText, Eye, Play, Download, CheckCircle } from 'lucide-react';
+import { X, FileText, Eye, Play, Download, CheckCircle, Database } from 'lucide-react';
+import { saveBulkProcessing, updateBulkProcessing, saveQRCodeGeneration } from '../lib/supabase';
 
 // Import the existing CSV components
-// Note: These should be available based on the handoff document
 import CSVUpload from './CSVUpload';
 import CSVPreview from './CSVPreview';
 
@@ -27,6 +27,7 @@ interface CSVBulkProcessorProps {
   onClose: () => void;
   logoFile?: File;
   processingOptions?: Partial<ProcessingOptions>;
+  userId?: string; // Optional user ID for tracking
 }
 
 const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
@@ -34,6 +35,7 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
   onClose,
   logoFile,
   processingOptions = {},
+  userId,
 }) => {
   const [stage, setStage] = useState<ProcessingStage>('upload');
   const [csvData, setCsvData] = useState<CSVRow[]>([]);
@@ -41,6 +43,8 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
   const [fileName, setFileName] = useState<string>('');
   const [downloadUrl, setDownloadUrl] = useState<string>('');
   const [processedCount, setProcessedCount] = useState<number>(0);
+  const [bulkProcessingId, setBulkProcessingId] = useState<string | null>(null);
+  const [saveToDatabase, setSaveToDatabase] = useState<boolean>(true);
 
   // Default processing options
   const defaultOptions: ProcessingOptions = {
@@ -53,21 +57,96 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
   };
 
   // Handle CSV upload completion
-  const handleCSVUpload = useCallback((data: CSVRow[], headers: string[], file: File) => {
+  const handleCSVUpload = useCallback(async (data: CSVRow[], headers: string[], file: File) => {
     setCsvData(data);
     setCsvHeaders(headers);
     setFileName(file.name);
     setStage('preview');
-  }, []);
+
+    // Create bulk processing record in database if enabled
+    if (saveToDatabase) {
+      try {
+        const result = await saveBulkProcessing({
+          user_id: userId,
+          filename: file.name,
+          total_rows: data.length,
+          processed_rows: 0,
+          failed_rows: 0,
+          status: 'pending',
+        });
+        
+        if (result.success && result.data) {
+          setBulkProcessingId(result.data.id);
+          console.log('✅ Bulk processing record created:', result.data.id);
+        }
+      } catch (error) {
+        console.warn('Failed to create bulk processing record:', error);
+        // Continue without database tracking
+      }
+    }
+  }, [userId, saveToDatabase]);
+
+  // Handle processing start
+  const handleProcessingStart = useCallback(async () => {
+    setStage('processing');
+    
+    // Update bulk processing status
+    if (saveToDatabase && bulkProcessingId) {
+      try {
+        await updateBulkProcessing(bulkProcessingId, {
+          status: 'processing',
+        });
+        console.log('📊 Updated bulk processing status to processing');
+      } catch (error) {
+        console.warn('Failed to update bulk processing status:', error);
+      }
+    }
+  }, [bulkProcessingId, saveToDatabase]);
 
   // Handle processing completion from CSVPreview
-  const handleProcessingComplete = useCallback((zipBlob: Blob, processedCount: number) => {
+  const handleProcessingComplete = useCallback(async (zipBlob: Blob, processedCount: number) => {
     // Create download URL for the ZIP file
     const url = URL.createObjectURL(zipBlob);
     setDownloadUrl(url);
     setProcessedCount(processedCount);
     setStage('complete');
-  }, []);
+
+    // Update bulk processing record with completion
+    if (saveToDatabase && bulkProcessingId) {
+      try {
+        const failedRows = csvData.length - processedCount;
+        await updateBulkProcessing(bulkProcessingId, {
+          status: 'completed',
+          processed_rows: processedCount,
+          failed_rows: failedRows,
+        });
+        console.log('✅ Bulk processing completed and saved to database');
+      } catch (error) {
+        console.warn('Failed to update bulk processing completion:', error);
+      }
+    }
+
+    // Save individual QR codes to database (sample - in production you'd want to do this more efficiently)
+    if (saveToDatabase && userId) {
+      try {
+        // Save a summary record of the bulk generation
+        await saveQRCodeGeneration({
+          user_id: userId,
+          data_type: 'text', // Default, would be determined by content analysis
+          content: `Bulk generation: ${fileName} (${processedCount} codes)`,
+          processing_options: {
+            size: defaultOptions.qrSize,
+            foregroundColor: defaultOptions.foregroundColor,
+            backgroundColor: defaultOptions.backgroundColor,
+            errorCorrectionLevel: defaultOptions.errorCorrectionLevel,
+          },
+        });
+        console.log('💾 QR generation summary saved to database');
+      } catch (error) {
+        console.warn('Failed to save QR generation summary:', error);
+      }
+    }
+  }, [bulkProcessingId, saveToDatabase, csvData.length, fileName, defaultOptions, userId]);
 
   // Handle back navigation
   const handleBack = useCallback(() => {
@@ -77,6 +156,7 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
         setCsvData([]);
         setCsvHeaders([]);
         setFileName('');
+        setBulkProcessingId(null);
         break;
       case 'processing':
         setStage('preview');
@@ -107,6 +187,7 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
     setFileName('');
     setDownloadUrl('');
     setProcessedCount(0);
+    setBulkProcessingId(null);
     
     onClose();
   }, [onClose, downloadUrl]);
@@ -158,9 +239,25 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 p-6">
           <div className="flex-1">
-            <h2 id="csv-processor-title" className="text-xl font-semibold text-gray-900">
-              {getStageTitles()}
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 id="csv-processor-title" className="text-xl font-semibold text-gray-900">
+                {getStageTitles()}
+              </h2>
+              
+              {/* Database integration indicator */}
+              {saveToDatabase && (
+                <div className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs text-green-800">
+                  <Database className="h-3 w-3" />
+                  <span>Tracking Enabled</span>
+                </div>
+              )}
+              
+              {bulkProcessingId && (
+                <div className="text-xs text-gray-500">
+                  ID: {bulkProcessingId.slice(0, 8)}...
+                </div>
+              )}
+            </div>
             
             {/* Progress bar */}
             <div className="mt-3">
@@ -213,6 +310,20 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
                 </p>
               </div>
               
+              {/* Database tracking toggle */}
+              <div className="flex items-center justify-center">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={saveToDatabase}
+                    onChange={(e) => setSaveToDatabase(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  />
+                  <Database className="h-4 w-4 text-gray-600" />
+                  <span className="text-gray-700">Save processing history to database</span>
+                </label>
+              </div>
+              
               <CSVUpload onUpload={handleCSVUpload} />
               
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
@@ -244,6 +355,13 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
                   <span>{fileName}</span>
                   <span>•</span>
                   <span>{csvData.length} rows</span>
+                  {bulkProcessingId && (
+                    <>
+                      <span>•</span>
+                      <Database className="h-4 w-4" />
+                      <span>Tracked</span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -252,7 +370,7 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
                 headers={csvHeaders}
                 processingOptions={defaultOptions}
                 onProcessingComplete={handleProcessingComplete}
-                onProcessingStart={() => setStage('processing')}
+                onProcessingStart={handleProcessingStart}
               />
             </div>
           )}
@@ -267,6 +385,11 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
                 <p className="mt-2 text-gray-600">
                   Generating QR codes and creating ZIP file...
                 </p>
+                {bulkProcessingId && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Tracking ID: {bulkProcessingId.slice(0, 8)}...
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -281,6 +404,11 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
                 <p className="mt-2 text-gray-600">
                   Successfully generated {processedCount} QR codes
                 </p>
+                {bulkProcessingId && saveToDatabase && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    📊 Processing history saved to database
+                  </p>
+                )}
               </div>
 
               <div className="rounded-lg border border-green-200 bg-green-50 p-6">
@@ -311,6 +439,7 @@ const CSVBulkProcessor: React.FC<CSVBulkProcessorProps> = ({
                   <li>• Organized by row data for easy identification</li>
                   <li>• High-quality {defaultOptions.qrSize}×{defaultOptions.qrSize}px resolution</li>
                   {defaultOptions.logoFile && <li>• Logo embedded in each QR code</li>}
+                  {saveToDatabase && <li>• Processing history saved to your account</li>}
                 </ul>
               </div>
             </div>
