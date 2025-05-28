@@ -19,9 +19,23 @@ const eslintConfig = [
       'out/**',
       '.turbo/**',
       'build/**',
+      '**/*.config.js',
+      '**/*.config.mjs',
+      '**/*.config.ts',
     ],
   },
-  ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  ...compat.extends('next/core-web-vitals', 'next/typescript', 'prettier'),
+  {
+    rules: {
+      'react/no-unescaped-entities': 'off',
+      'no-unused-vars': 'warn',
+      'no-console': 'warn',
+      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'prefer-const': 'warn',
+      'no-var': 'error',
+    },
+  },
 ];
 
 export default eslintConfig;
