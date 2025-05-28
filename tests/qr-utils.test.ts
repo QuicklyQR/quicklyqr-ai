@@ -753,8 +753,10 @@ describe('qr-utils', () => {
           foregroundColor: '#000000',
           backgroundColor: '#ffffff',
           errorCorrectionLevel: 'M',
-        });
-      });
+          logoFile: undefined,
+          logoMargin: 0,
+          logoSize: 0.4
+        });      });
 
       it('should return an object with all required properties', () => {
         const options = getDefaultQROptions();

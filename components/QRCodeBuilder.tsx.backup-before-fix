@@ -14,7 +14,6 @@ import {
   createInitialQRData,
   getDefaultQROptions,
   convertToQRCodeStylingOptions,
-  positionLogoBottomRight,
   ERROR_CORRECTION_LEVELS,
   QR_DATA_TYPES,
 } from '../lib/qr-utils';
@@ -45,13 +44,7 @@ const useQRCode = (qrString: string, options: QROptions) => {
     const generateQR = async () => {
       try {
         // Clear existing content safely
-        if (container) {
-          try {
-            container.innerHTML = '';
-          } catch (error) {
-            // Ignore cleanup errors
-          }
-        }
+        container.innerHTML = '';
 
         // Create new QR code instance
         const stylingOptions = convertToQRCodeStylingOptions(options, qrString);
@@ -63,14 +56,6 @@ const useQRCode = (qrString: string, options: QROptions) => {
         // Check if container still exists and is mounted before appending
         if (container && container.parentNode) {
           await qr.append(container);
-
-          // Add custom logo positioning to bottom-right
-          if (options.logoFile) {
-            const canvas = container.querySelector("canvas") as HTMLCanvasElement;
-            if (canvas) {
-              await positionLogoBottomRight(canvas, options.logoFile, options.logoSize || 0.2);
-            }
-          }
           setQrInstance(qr);
         }
       } catch (error) {
@@ -83,20 +68,11 @@ const useQRCode = (qrString: string, options: QROptions) => {
 
     generateQR();
 
-    // IMPROVED: Cleanup function with better error handling
+    // FIXED: Cleanup function with proper ref handling
     return () => {
-      try {
-        // Use the container variable captured at the start of the effect
-        if (container) {
-          try {
-            container.innerHTML = '';
-          } catch (error) {
-            // Ignore cleanup errors
-          }
-        }
-      } catch (error) {
-        // Silently handle cleanup errors to prevent crashes
-        console.warn('QR cleanup warning:', error);
+      // Use the container variable captured at the start of the effect
+      if (container) {
+        container.innerHTML = '';
       }
       setQrInstance(null);
     };
@@ -512,21 +488,9 @@ const QRCodeBuilder: React.FC = () => {
                 id="website-input"
                 type="url"
                 value={qrData.vcard?.url || ''}
-                onChange={(e) => {
-                  let value = e.target.value;
-                  // Auto-add https:// if user types a domain without protocol
-                  if (
-                    value &&
-                    value.length > 3 &&
-                    !value.match(/^https?:\/\//) &&
-                    value.includes('.')
-                  ) {
-                    value = `https://${value}`;
-                  }
-                  updateQRData('url', value);
-                }}
+                onChange={(e) => updateQRData('url', e.target.value)}
                 onBlur={() => handleFieldTouch('vcardUrl')}
-                placeholder="company.com"
+                placeholder="https://company.com"
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 aria-invalid={validationErrors.some((error) => error.includes('URL'))}
               />
